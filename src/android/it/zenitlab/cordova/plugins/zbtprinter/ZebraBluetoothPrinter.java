@@ -36,7 +36,20 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
                 e.printStackTrace();
             }
             return true;
-        }
+        } else {
+	    if (action.equals("file")) {
+		try {
+		    String filepath = args.getString(0);
+		    String mac = args.getString(1);
+		    sendFile(callbackContext, filepath, mac);
+		} catch (IOException e) {
+		    Log.e(LOG_TAG, e.getMessage());
+		    e.printStackTrace();
+		}
+		return true;
+	    }
+	}
+	    
         return false;
     }
 
@@ -62,6 +75,43 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
                         thePrinterConn.write(msg.getBytes());
 
 
+                        // Make sure the data got to the printer before closing the connection
+                        Thread.sleep(500);
+
+                        // Close the insecure connection to release resources.
+                        thePrinterConn.close();
+                        callbackContext.success("Stampa terminata");
+                    } else {
+						callbackContext.error("printer is not ready");
+					}
+                } catch (Exception e) {
+                    // Handle communications error here.
+                    callbackContext.error(e.getMessage());
+                }
+            }
+        }).start();
+    }
+	
+	/*
+     * This will send file to be printed by the bluetooth printer
+     */
+    void sendFile(final CallbackContext callbackContext, final String filepath, final String mac) throws IOException {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Instantiate insecure connection for given Bluetooth MAC Address.
+                    Connection thePrinterConn = new BluetoothConnectionInsecure(mac);
+
+                    // Verify the printer is ready to print
+                    if (isPrinterReady(thePrinterConn)) {
+
+                        // Open the connection - physical connection is established here.
+                        thePrinterConn.open();
+			    
+			ZebraPrinter printer = ZebraPrinterFactory.getInstance(thePrinterConn);
+			printer.sendFileContents(filepath);   
+			    
                         // Make sure the data got to the printer before closing the connection
                         Thread.sleep(500);
 
