@@ -6,12 +6,18 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.json.JSONArray;
 import org.json.JSONException;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Looper;
+import android.util.Base64;
 import android.util.Log;
 import com.zebra.sdk.comm.BluetoothConnectionInsecure;
 import com.zebra.sdk.comm.Connection;
 import com.zebra.sdk.comm.ConnectionException;
 import com.zebra.sdk.printer.PrinterStatus;
 import com.zebra.sdk.printer.SGD;
+import com.zebra.sdk.graphics.internal.ZebraImageAndroid;
+import com.zebra.sdk.printer.ZebraPrinterLinkOs;
 import com.zebra.sdk.printer.ZebraPrinter;
 import com.zebra.sdk.printer.ZebraPrinterFactory;
 import com.zebra.sdk.printer.ZebraPrinterLanguageUnknownException;
@@ -48,6 +54,18 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
 		    e.printStackTrace();
 		}
 		return true;
+	    } else {
+	    	if (action.equals("image")) {
+		    try {
+		        JSONArray labels = args.getJSONArray(0);
+                        String mac = args.getString(1);
+                        sendImage(callbackContext, labels, mac);
+		    } catch (IOException e) {
+		        Log.e(LOG_TAG, e.getMessage());
+		        e.printStackTrace();
+		    }
+		    return true;
+	        }
 	    }
 	}
 	    
@@ -127,6 +145,67 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
 						callbackContext.error("printer is not ready");
 					}
                 } catch (Exception e) {
+                    // Handle communications error here.
+                    callbackContext.error(e.getMessage());
+                }
+            }
+        }).start();
+    }
+	
+    void sendImage(final CallbackContext callbackContext, final JSONArray labels, final String mac) throws IOException {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+		    // Instantiate insecure connection for given Bluetooth MAC Address.
+                    Connection thePrinterConn = new BluetoothConnectionInsecure(mac);
+
+		    // Verify the printer is ready to print
+                    if (isPrinterReady(thePrinterConn)) {
+			 // Open the connection - physical connection is established here.
+                         thePrinterConn.open();
+			    
+			 ZebraPrinter printer = ZebraPrinterFactory.getInstance(thePrinterConn);   
+			    
+			 ZebraPrinterLinkOs zebraPrinterLinkOs = ZebraPrinterFactory.createLinkOsPrinter(printer);
+
+			 for (int i = labels.length() - 1; i >= 0; i--) {
+			    String base64Image = labels.get(i).toString();
+			    byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+			    Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+			    ZebraImageAndroid zebraimage = new ZebraImageAndroid(decodedByte);
+
+			    //Lengte van het label eerst instellen om te kleine of te grote afdruk te voorkomen
+			    if (zebraPrinterLinkOs != null && i == labels.length() - 1) {
+				String currentLabelLength = zebraPrinterLinkOs.getSettingValue("zpl.label_length");
+				if (!currentLabelLength.equals(String.valueOf(zebraimage.getHeight()))) {
+				    zebraPrinterLinkOs.setSetting("zpl.label_length", zebraimage.getHeight() + "");
+				}
+			    }
+
+			    if (zebraPrinterLinkOs != null) {
+				printer.printImage(zebraimage, 150, 0, zebraimage.getWidth(), zebraimage.getHeight(), false);
+			    } else {
+				Log.d(LOG_TAG, "Storing label on printer...");
+				printer.storeImage("wgkimage.pcx", zebraimage, -1, -1);
+				String cpcl = "! 0 200 200 ";
+				cpcl += zebraimage.getHeight();
+				cpcl += " 1\r\n";
+				cpcl += "PW 750\r\nTONE 0\r\nSPEED 6\r\nSETFF 203 5\r\nON - FEED FEED\r\nAUTO - PACE\r\nJOURNAL\r\n";
+				cpcl += "PCX 150 0 !<wgkimage.pcx\r\n";
+				cpcl += "FORM\r\n";
+				cpcl += "PRINT\r\n";
+				thePrinterConn.write(cpcl.getBytes());
+			    }
+			 }
+
+			 //Voldoende wachten zodat label afgeprint is voordat we een nieuwe printer-operatie starten.
+			 Thread.sleep(15000);
+
+			 callbackContext.success();
+		    }
+
+		} catch (Exception e) {
                     // Handle communications error here.
                     callbackContext.error(e.getMessage());
                 }
