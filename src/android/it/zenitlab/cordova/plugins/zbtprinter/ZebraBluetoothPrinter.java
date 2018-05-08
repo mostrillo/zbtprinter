@@ -110,7 +110,7 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
                         // Open the connection - physical connection is established here.
                         thePrinterConn.open();
 			    
-			ZebraPrinter printer = ZebraPrinterFactory.getInstance(PrinterLanguage.LINE_PRINT, thePrinterConn);
+			ZebraPrinter printer = ZebraPrinterFactory.getInstance(PrinterLanguage.CPCL, thePrinterConn);
 			printer.sendFileContents(filepath);   
 			    
                         // Make sure the data got to the printer before closing the connection
