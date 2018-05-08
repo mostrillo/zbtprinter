@@ -11,6 +11,7 @@ import com.zebra.sdk.comm.BluetoothConnectionInsecure;
 import com.zebra.sdk.comm.Connection;
 import com.zebra.sdk.comm.ConnectionException;
 import com.zebra.sdk.printer.PrinterStatus;
+import com.zebra.sdk.printer.PrinterLanguage;
 import com.zebra.sdk.printer.ZebraPrinter;
 import com.zebra.sdk.printer.ZebraPrinterFactory;
 import com.zebra.sdk.printer.ZebraPrinterLanguageUnknownException;
@@ -109,7 +110,7 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
                         // Open the connection - physical connection is established here.
                         thePrinterConn.open();
 			    
-			ZebraPrinter printer = ZebraPrinterFactory.getInstance(thePrinterConn);
+			ZebraPrinter printer = ZebraPrinterFactory.getInstance(PrinterLanguage.ZPL, thePrinterConn);
 			printer.sendFileContents(filepath);   
 			    
                         // Make sure the data got to the printer before closing the connection
