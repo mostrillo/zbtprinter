@@ -57,8 +57,10 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
 	    } else {
 	    	if (action.equals("image")) {
 		    try {
+			System.out.println("IMAGE ACTION");
 		        JSONArray labels = args.getJSONArray(0);
                         String mac = args.getString(1);
+			System.out.println("SEND IMAGE TO ZEBRA");
                         sendImage(callbackContext, labels, mac);
 		    } catch (IOException e) {
 		        Log.e(LOG_TAG, e.getMessage());
@@ -169,6 +171,7 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
 			    
 			 ZebraPrinterLinkOs zebraPrinterLinkOs = ZebraPrinterFactory.createLinkOsPrinter(printer);
 
+			 System.out.println("LABELS LENGHT " + labels.length());
 			 for (int i = labels.length() - 1; i >= 0; i--) {
 			    String base64Image = labels.get(i).toString();
 			    byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
@@ -184,9 +187,10 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
 			    }
 
 			    if (zebraPrinterLinkOs != null) {
+				System.out.println("PRINT IMAGE");
 				printer.printImage(zebraimage, 150, 0, zebraimage.getWidth(), zebraimage.getHeight(), false);
 			    } else {
-				Log.d(LOG_TAG, "Storing label on printer...");
+				System.out.println("PRINT IMAGE OLD WAY");
 				printer.storeImage("wgkimage.pcx", zebraimage, -1, -1);
 				String cpcl = "! 0 200 200 ";
 				cpcl += zebraimage.getHeight();
@@ -201,10 +205,12 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
 
 			 //Voldoende wachten zodat label afgeprint is voordat we een nieuwe printer-operatie starten.
 			 Thread.sleep(15000);
-
-			 callbackContext.success();
+				
+			 thePrinterConn.close();
+			 callbackContext.success("Stampa terminata");
+		    } else {
+			 callbackContext.error("printer is not ready");
 		    }
-
 		} catch (Exception e) {
                     // Handle communications error here.
                     callbackContext.error(e.getMessage());
