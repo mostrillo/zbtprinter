@@ -58,7 +58,8 @@ public class ZebraBluetoothPrinter extends CordovaPlugin {
 	    	if (action.equals("image")) {
 		    try {
 			System.out.println("IMAGE ACTION");
-		        JSONArray labels = args.getJSONArray(0);
+		        //JSONArray labels = args.getJSONArray(0);
+			JSONArray labels = new JsonArray(args.getString(0));
                         String mac = args.getString(1);
 			System.out.println("SEND IMAGE TO ZEBRA");
                         sendImage(callbackContext, labels, mac);
